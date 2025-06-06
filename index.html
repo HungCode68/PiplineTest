@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Nhập</title>
+    <link rel="stylesheet" href="Style2.css">
+    <link rel="icon" href="img/ms-icon-310x310.png">
+    <!-- Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="wrapper">
+        <form id="loginForm" class="form-login">
+            <h1 class="form-heading">Login</h1>
+            
+            <!-- Username Field -->
+            <div class="form-group">
+                <i class="far fa-user"></i>
+                <input type="text" class="form-input" placeholder="Tên đăng nhập" name="username" id="username" required />
+            </div>
+            
+            <!-- Password Field with Visibility Toggle -->
+            <div class="form-group" id="passwordField">
+                <i class="fas fa-key"></i>
+                <input type="text" class="form-input" placeholder="Mật khẩu" id="password" name="password" required />
+                <div id="eye">
+                    <button type="button" id="showPasswordButton" style="display: none;">
+                        <i class="far fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label for="" style="color: white;">Xác thực mã OTP</label>
+                <input type="radio" >
+                <label for="" style="color: white;">Xác thực phân quyền(Admin only)</label>
+                <input type="radio">
+            </div>
+            
+            <!-- OTP Field (Initially Hidden) -->
+            <div id="userotpField" style="display: none;" class="form-group">
+                <i class="fas fa-key"></i>
+                <input type="text" class="form-input" placeholder="OTP" id="userotp" name="userotp" />
+            </div>
+            
+            <!-- Buttons -->
+            <div class="list-button">
+                <button type="submit" id="loginButton" class="form-submit">Đăng Nhập</button>
+                <button type="button" id="confirmButton" class="form-submit" style="display: none;">Confirm</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- JavaScript for Form Handling and Interactivity -->
+    <script>
+       document.getElementById('loginForm').addEventListener('submit', async function(event) {
+    console.log('Submitting user data');
+    event.preventDefault();
+
+    const formData = new FormData(this);
+    const data = {
+        username: formData.get('username'),
+        password: formData.get('password')
+    };
+
+    try {
+        // First, try OTP login
+        const otpResponse = await fetch('http://localhost:3000/login/otp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (otpResponse.ok) {
+            // OTP login successful
+            document.getElementById('userotpField').style.display = 'block';
+            document.getElementById('confirmButton').style.display = 'block';
+            document.getElementById('passwordField').style.display = 'none';
+            document.getElementById('loginButton').style.display = 'none';
+        } else {
+            // If OTP login fails, try JWT login
+            const jwtResponse = await fetch('http://localhost:3000/login/jwt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (jwtResponse.ok) {
+                // JWT login successful
+                window.location.href = 'Dashboard2.html';
+            } else {
+                // Both OTP and JWT login failed
+                const errorData = await jwtResponse.json();
+                alert(errorData.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+            }
+        }
+    } catch (error) {
+        console.error('Error during login:', error);
+        alert('Đã xảy ra lỗi trong quá trình đăng nhập.');
+    }
+});
+
+// Add event listener for OTP confirmation
+document.getElementById('confirmButton').addEventListener('click', async function() {
+    const username = document.getElementById('username').value;
+    const otp = document.getElementById('userotp').value;
+
+    try {
+        const response = await fetch('http://localhost:3000/verify-otp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, otp })
+        });
+
+        if (response.ok) {
+            window.location.href = 'Dashboard2.html';
+        } else {
+            const errorData = await response.json();
+            alert(errorData.message || 'OTP verification failed.');
+        }
+    } catch (error) {
+        console.error('Error during OTP verification:', error);
+        alert('An error occurred during OTP verification.');
+    }
+});
+
+
+        // Handle Password Visibility Toggle
+        document.getElementById('showPasswordButton').addEventListener('click', () => {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.querySelector('#showPasswordButton i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('far', 'fa-eye');
+                eyeIcon.classList.add('fas', 'fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fas', 'fa-eye-slash');
+                eyeIcon.classList.add('far', 'fa-eye');
+            }
+        });
+    </script>
+</body>
+</html>
